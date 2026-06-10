@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rétroviseur</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="room-page">
+
+  <!-- Header -->
+  <header id="room-header">
+    <div class="header-left">
+      <a href="/" class="logo-sm">🔭</a>
+      <div>
+        <div id="room-title" class="room-title">Loading…</div>
+        <div class="room-meta">
+          <span id="room-code-label" class="room-code-badge"></span>
+          <button id="copy-btn" class="btn-icon" title="Copy invite link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy link
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="participants-bar" class="participants-bar"></div>
+      <div id="facilitator-controls" class="facilitator-controls hidden">
+        <button id="reveal-btn" class="btn btn-sm btn-ghost">👁 Show authors</button>
+        <button id="clear-votes-btn" class="btn btn-sm btn-ghost">🗑 Clear votes</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Columns -->
+  <main id="columns-container" class="columns-container"></main>
+
+  <!-- Toast -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Join name modal (shown when accessing via link) -->
+  <div id="join-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-logo">🔭</div>
+      <h2>Join the retrospective</h2>
+      <p id="modal-room-name" class="modal-subtitle"></p>
+      <form id="join-modal-form">
+        <div class="field">
+          <label for="modal-name">Your name</label>
+          <input id="modal-name" type="text" placeholder="e.g. Alice" maxlength="30" autocomplete="off" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Join</button>
+      </form>
+      <p id="modal-error" class="error-msg"></p>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="room.js"></script>
+</body>
+</html>

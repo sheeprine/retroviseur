@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rétroviseur — Scrum Retrospective Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="home-page">
+  <div class="home-container">
+    <header class="home-header">
+      <div class="logo">
+        <span class="logo-icon">🔭</span>
+        <span class="logo-text">Rétroviseur</span>
+      </div>
+      <p class="tagline">Real-time Scrum retrospectives for your team</p>
+    </header>
+
+    <main class="home-cards">
+      <div class="home-card">
+        <h2>Create a Room</h2>
+        <p class="card-desc">Start a new retrospective and invite your team</p>
+        <form id="create-form">
+          <div class="field">
+            <label for="create-name">Your name</label>
+            <input id="create-name" type="text" placeholder="e.g. Alice" maxlength="30" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="room-name">Session name</label>
+            <input id="room-name" type="text" placeholder="e.g. Sprint 42 Retro" maxlength="60" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="format">Format</label>
+            <select id="format">
+              <option value="classic">Classic — Went Well / To Improve / Actions</option>
+              <option value="start_stop_continue">Start / Stop / Continue</option>
+              <option value="four_ls">4 Ls — Liked / Learned / Lacked / Longed For</option>
+              <option value="mad_sad_glad">Mad / Sad / Glad</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Create Room</button>
+        </form>
+      </div>
+
+      <div class="home-divider">
+        <span>or</span>
+      </div>
+
+      <div class="home-card">
+        <h2>Join a Room</h2>
+        <p class="card-desc">Enter a room code shared by your facilitator</p>
+        <form id="join-form">
+          <div class="field">
+            <label for="join-name">Your name</label>
+            <input id="join-name" type="text" placeholder="e.g. Bob" maxlength="30" autocomplete="off" required />
+          </div>
+          <div class="field">
+            <label for="join-code">Room code</label>
+            <input id="join-code" type="text" placeholder="e.g. A3B2C1" maxlength="6"
+              autocomplete="off" autocapitalize="characters" spellcheck="false" required />
+          </div>
+          <button type="submit" class="btn btn-secondary btn-full">Join Room</button>
+        </form>
+        <p id="join-error" class="error-msg"></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const savedName = localStorage.getItem('retro-name') || '';
+
+    document.getElementById('create-name').value = savedName;
+    document.getElementById('join-name').value = savedName;
+
+    // Pre-fill code from URL if present
+    const params = new URLSearchParams(location.search);
+    const codeParam = params.get('code');
+    if (codeParam) {
+      document.getElementById('join-code').value = codeParam.toUpperCase();
+      document.getElementById('join-name').focus();
+    } else {
+      document.getElementById('create-name').focus();
+    }
+
+    const socket = io();
+
+    document.getElementById('create-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('create-name').value.trim();
+      const roomName = document.getElementById('room-name').value.trim();
+      const format = document.getElementById('format').value;
+      if (!name) return;
+
+      localStorage.setItem('retro-name', name);
+      socket.emit('create-room', { name, roomName, format }, ({ ok, room, error }) => {
+        if (ok) {
+          sessionStorage.setItem('retro-room', JSON.stringify(room));
+          location.href = `/room.html?code=${room.code}`;
+        } else {
+          alert(error || 'Could not create room');
+        }
+      });
+    });
+
+    document.getElementById('join-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('join-name').value.trim();
+      const code = document.getElementById('join-code').value.trim().toUpperCase();
+      if (!name || !code) return;
+
+      const errEl = document.getElementById('join-error');
+      errEl.textContent = '';
+      localStorage.setItem('retro-name', name);
+
+      socket.emit('join-room', { name, code }, ({ ok, room, error }) => {
+        if (ok) {
+          sessionStorage.setItem('retro-room', JSON.stringify(room));
+          location.href = `/room.html?code=${room.code}`;
+        } else {
+          errEl.textContent = error || 'Could not join room';
+        }
+      });
+    });
+
+    // Auto-uppercase room code
+    document.getElementById('join-code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>
