@@ -30,6 +30,7 @@
       </div>
       <div id="participants-bar" class="participants-bar"></div>
       <div id="facilitator-controls" class="facilitator-controls hidden">
+        <button id="markdown-btn" class="btn btn-sm btn-ghost">🔤 Markdown on</button>
         <button id="blur-btn" class="btn btn-sm btn-ghost">🫣 Blur cards</button>
         <button id="reveal-btn" class="btn btn-sm btn-ghost">👁 Show authors</button>
         <button id="clear-votes-btn" class="btn btn-sm btn-ghost">🗑 Clear votes</button>
@@ -62,6 +63,8 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
   <script src="room.js"></script>
 </body>
 </html>

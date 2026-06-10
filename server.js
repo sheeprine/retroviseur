@@ -99,6 +99,7 @@ function serializeRoom(room, viewerId) {
     facilitatorId: room.facilitatorId,
     revealed: room.revealed,
     blurred: room.blurred,
+    markdown: room.markdown,
     maxVotes: room.maxVotes,
     isFacilitator: room.facilitatorId === viewerId
   };
@@ -116,7 +117,7 @@ function addParticipant(socket, room, name) {
 io.on('connection', (socket) => {
   let currentRoom = null;
 
-  socket.on('create-room', ({ name, roomName, format, maxVotes, blurred }, cb) => {
+  socket.on('create-room', ({ name, roomName, format, maxVotes, blurred, markdown }, cb) => {
     const code = generateCode();
     const fmt = FORMATS[format] || FORMATS.classic;
     const room = {
@@ -129,6 +130,7 @@ io.on('connection', (socket) => {
       facilitatorId: socket.id,
       revealed: false,
       blurred: blurred === true,
+      markdown: markdown !== false,
       maxVotes: Math.max(0, Math.min(99, parseInt(maxVotes) || 0))
     };
     rooms.set(code, room);
@@ -273,6 +275,13 @@ io.on('connection', (socket) => {
     if (!room || room.facilitatorId !== socket.id) return;
     room.blurred = !room.blurred;
     io.to(currentRoom).emit('blur-toggled', { blurred: room.blurred });
+  });
+
+  socket.on('toggle-markdown', () => {
+    const room = rooms.get(currentRoom);
+    if (!room || room.facilitatorId !== socket.id) return;
+    room.markdown = !room.markdown;
+    io.to(currentRoom).emit('markdown-toggled', { markdown: room.markdown });
   });
 
   socket.on('clear-votes', () => {

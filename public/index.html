@@ -50,6 +50,10 @@
                 <input id="start-blurred" type="checkbox" />
                 <label for="start-blurred">Start with cards blurred</label>
               </div>
+              <div class="field field-checkbox">
+                <input id="enable-markdown" type="checkbox" checked />
+                <label for="enable-markdown">Enable markdown in cards</label>
+              </div>
             </div>
           </details>
           <button type="submit" class="btn btn-primary btn-full">Create Room</button>
@@ -106,10 +110,11 @@
       const format = document.getElementById('format').value;
       const maxVotes = parseInt(document.getElementById('max-votes').value) || 0;
       const blurred = document.getElementById('start-blurred').checked;
+      const markdown = document.getElementById('enable-markdown').checked;
       if (!name) return;
 
       localStorage.setItem('retro-name', name);
-      socket.emit('create-room', { name, roomName, format, maxVotes, blurred }, ({ ok, room, error }) => {
+      socket.emit('create-room', { name, roomName, format, maxVotes, blurred, markdown }, ({ ok, room, error }) => {
         if (ok) {
           sessionStorage.setItem('retro-room', JSON.stringify(room));
           location.href = `/room.html?code=${room.code}`;

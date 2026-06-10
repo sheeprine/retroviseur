@@ -87,6 +87,7 @@ function initRoom(room) {
 
   document.getElementById('copy-btn').addEventListener('click', copyLink);
   document.getElementById('sort-btn').addEventListener('click', openSortDropdown);
+  document.getElementById('markdown-btn')?.addEventListener('click', () => socket.emit('toggle-markdown'));
   document.getElementById('blur-btn')?.addEventListener('click', () => socket.emit('toggle-blur'));
   document.getElementById('reveal-btn')?.addEventListener('click', () => socket.emit('toggle-reveal'));
   document.getElementById('clear-votes-btn')?.addEventListener('click', () => {
@@ -95,6 +96,7 @@ function initRoom(room) {
   document.getElementById('delegate-btn')?.addEventListener('click', openDelegateDropdown);
 
   applyBlurState();
+  applyMarkdownState();
 }
 
 /* ── Render helpers ── */
@@ -135,6 +137,12 @@ function applyBlurState() {
   const shouldBlur = state.room?.blurred && !state.isFacilitator;
   document.body.classList.toggle('cards-blurred', shouldBlur);
   updateBlurBtn();
+}
+
+function applyMarkdownState() {
+  const btn = document.getElementById('markdown-btn');
+  if (btn) btn.textContent = state.room?.markdown ? '🔤 Markdown on' : '🔤 Markdown off';
+  rerenderAllCards();
 }
 
 function renderColumns() {
@@ -227,7 +235,7 @@ function cardHTML(card) {
   const max = state.room?.maxVotes;
   const atLimit = max > 0 && countMyVotes() >= max && !card.hasVoted;
   return `
-    <div class="card-text">${escHtml(card.text)}</div>
+    <div class="card-text${state.room?.markdown ? '' : ' plain'}">${renderMd(card.text)}</div>
     ${author}
     <div class="card-footer">
       <button class="vote-btn${votedClass}" data-card="${card.id}"${atLimit ? ' disabled' : ''}>
@@ -575,10 +583,7 @@ socket.on('card-updated', ({ cardId, text }) => {
   if (!card) return;
   card.text = text;
   const el = document.getElementById(`card-${cardId}`);
-  if (el) {
-    const textEl = el.querySelector('.card-text');
-    if (textEl) textEl.textContent = text;
-  }
+  if (el) updateCardEl(el, card);
 });
 
 socket.on('card-moved', ({ cardId, columnId }) => {
@@ -655,6 +660,12 @@ socket.on('blur-toggled', ({ blurred }) => {
   toast(blurred ? '🫣 Cards blurred' : '👁 Cards visible');
 });
 
+socket.on('markdown-toggled', ({ markdown }) => {
+  state.room.markdown = markdown;
+  applyMarkdownState();
+  toast(markdown ? '🔤 Markdown enabled' : '🔤 Markdown disabled');
+});
+
 socket.on('facilitator-changed', ({ facilitatorId }) => {
   state.facilitatorId = facilitatorId;
   const wasMe = state.isFacilitator;
@@ -673,6 +684,18 @@ socket.on('connect', () => {
 });
 
 /* ── Utils ── */
+function renderMd(text) {
+  if (!state.room?.markdown) return escHtml(String(text ?? ''));
+  return DOMPurify.sanitize(marked.parse(String(text ?? '')));
+}
+
+function rerenderAllCards() {
+  for (const card of state.cards.values()) {
+    const el = document.getElementById(`card-${card.id}`);
+    if (el) updateCardEl(el, card);
+  }
+}
+
 function escHtml(str) {
   return String(str ?? '')
     .replace(/&/g, '&amp;')
