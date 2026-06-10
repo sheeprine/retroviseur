@@ -84,11 +84,14 @@ function initRoom(room) {
   renderColumns();
 
   document.getElementById('copy-btn').addEventListener('click', copyLink);
+  document.getElementById('blur-btn')?.addEventListener('click', () => socket.emit('toggle-blur'));
   document.getElementById('reveal-btn')?.addEventListener('click', () => socket.emit('toggle-reveal'));
   document.getElementById('clear-votes-btn')?.addEventListener('click', () => {
     if (confirm('Clear all votes?')) socket.emit('clear-votes');
   });
   document.getElementById('delegate-btn')?.addEventListener('click', openDelegateDropdown);
+
+  applyBlurState();
 }
 
 /* ── Render helpers ── */
@@ -110,12 +113,25 @@ function renderFacilitatorControls() {
   if (state.isFacilitator) el.classList.remove('hidden');
   else el.classList.add('hidden');
   updateRevealBtn();
+  updateBlurBtn();
 }
 
 function updateRevealBtn() {
   const btn = document.getElementById('reveal-btn');
   if (!btn) return;
   btn.textContent = state.room?.revealed ? '🙈 Hide authors' : '👁 Show authors';
+}
+
+function updateBlurBtn() {
+  const btn = document.getElementById('blur-btn');
+  if (!btn) return;
+  btn.textContent = state.room?.blurred ? '👁 Unblur cards' : '🫣 Blur cards';
+}
+
+function applyBlurState() {
+  const shouldBlur = state.room?.blurred && !state.isFacilitator;
+  document.body.classList.toggle('cards-blurred', shouldBlur);
+  updateBlurBtn();
 }
 
 function renderColumns() {
@@ -221,7 +237,10 @@ function updateCardEl(el, card) {
 }
 
 function bindCardEvents(el, card) {
-  el.querySelector('.vote-btn')?.addEventListener('click', () => socket.emit('vote-card', { cardId: card.id }));
+  el.querySelector('.vote-btn')?.addEventListener('click', () => {
+    if (state.room?.blurred && !state.isFacilitator) return;
+    socket.emit('vote-card', { cardId: card.id });
+  });
   el.querySelector('.delete-btn')?.addEventListener('click', () => {
     if (confirm('Delete this card?')) socket.emit('delete-card', { cardId: card.id });
   });
@@ -495,6 +514,12 @@ socket.on('participant-left', ({ id }) => {
   renderParticipants();
 });
 
+socket.on('blur-toggled', ({ blurred }) => {
+  state.room.blurred = blurred;
+  applyBlurState();
+  toast(blurred ? '🫣 Cards blurred' : '👁 Cards visible');
+});
+
 socket.on('facilitator-changed', ({ facilitatorId }) => {
   state.facilitatorId = facilitatorId;
   const wasMe = state.isFacilitator;
@@ -502,6 +527,7 @@ socket.on('facilitator-changed', ({ facilitatorId }) => {
   if (state.isFacilitator && !wasMe) toast('👑 You are now the facilitator');
   renderFacilitatorControls();
   renderParticipants();
+  applyBlurState();
 });
 
 socket.on('disconnect', () => {

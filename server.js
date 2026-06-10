@@ -98,6 +98,7 @@ function serializeRoom(room, viewerId) {
     participants: [...room.participants.values()],
     facilitatorId: room.facilitatorId,
     revealed: room.revealed,
+    blurred: room.blurred,
     isFacilitator: room.facilitatorId === viewerId
   };
 }
@@ -125,7 +126,8 @@ io.on('connection', (socket) => {
       cards: new Map(),
       participants: new Map(),
       facilitatorId: socket.id,
-      revealed: false
+      revealed: false,
+      blurred: false
     };
     rooms.set(code, room);
     addParticipant(socket, room, name);
@@ -170,7 +172,7 @@ io.on('connection', (socket) => {
 
   socket.on('vote-card', ({ cardId }) => {
     const room = rooms.get(currentRoom);
-    if (!room) return;
+    if (!room || room.blurred) return;
     const card = room.cards.get(cardId);
     if (!card) return;
 
@@ -237,6 +239,13 @@ io.on('connection', (socket) => {
     if (!room.participants.has(targetId)) return;
     room.facilitatorId = targetId;
     io.to(currentRoom).emit('facilitator-changed', { facilitatorId: targetId });
+  });
+
+  socket.on('toggle-blur', () => {
+    const room = rooms.get(currentRoom);
+    if (!room || room.facilitatorId !== socket.id) return;
+    room.blurred = !room.blurred;
+    io.to(currentRoom).emit('blur-toggled', { blurred: room.blurred });
   });
 
   socket.on('clear-votes', () => {

@@ -397,6 +397,22 @@ body {
 .card[draggable="true"] { cursor: grab; }
 .card.dragging { opacity: 0.4; }
 
+.cards-blurred .card-text,
+.cards-blurred .card-author {
+  filter: blur(6px);
+  user-select: none;
+  transition: filter .2s;
+}
+.cards-blurred .card:hover .card-text,
+.cards-blurred .card:hover .card-author {
+  filter: blur(6px);
+}
+.cards-blurred .vote-btn {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}
+
 .cards-list.drag-over {
   background: var(--primary-light);
   border-radius: var(--radius);
