@@ -241,7 +241,7 @@ function updateCardEl(el, card) {
 
 function bindCardEvents(el, card) {
   el.querySelector('.vote-btn')?.addEventListener('click', () => {
-    if (state.room?.blurred && !state.isFacilitator) return;
+    if (state.room?.blurred && !state.isFacilitator && !card.isOwn) return;
     socket.emit('vote-card', { cardId: card.id });
   });
   el.querySelector('.delete-btn')?.addEventListener('click', () => {

@@ -434,17 +434,17 @@ body {
 .card[draggable="true"] { cursor: grab; }
 .card.dragging { opacity: 0.4; }
 
-.cards-blurred .card-text,
-.cards-blurred .card-author {
+.cards-blurred .card:not(.is-own) .card-text,
+.cards-blurred .card:not(.is-own) .card-author {
   filter: blur(6px);
   user-select: none;
   transition: filter .2s;
 }
-.cards-blurred .card:hover .card-text,
-.cards-blurred .card:hover .card-author {
+.cards-blurred .card:not(.is-own):hover .card-text,
+.cards-blurred .card:not(.is-own):hover .card-author {
   filter: blur(6px);
 }
-.cards-blurred .vote-btn {
+.cards-blurred .card:not(.is-own) .vote-btn {
   opacity: 0.4;
   pointer-events: none;
   cursor: default;
