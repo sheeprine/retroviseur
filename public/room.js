@@ -8,7 +8,8 @@ const state = {
   isFacilitator: false,
   facilitatorId: null,
   cards: new Map(),        // cardId → card data
-  participants: new Map()  // id → participant
+  participants: new Map(), // id → participant
+  sortOrder: 'date'        // 'date' | 'votes' | 'random'
 };
 
 /* ── Socket ── */
@@ -85,6 +86,7 @@ function initRoom(room) {
   updateVotesCounter();
 
   document.getElementById('copy-btn').addEventListener('click', copyLink);
+  document.getElementById('sort-btn').addEventListener('click', openSortDropdown);
   document.getElementById('blur-btn')?.addEventListener('click', () => socket.emit('toggle-blur'));
   document.getElementById('reveal-btn')?.addEventListener('click', () => socket.emit('toggle-reveal'));
   document.getElementById('clear-votes-btn')?.addEventListener('click', () => {
@@ -184,8 +186,10 @@ function renderColumns() {
     });
   }
 
-  // Render all existing cards
-  for (const card of state.cards.values()) renderCard(card);
+  // Render all existing cards in sorted order per column
+  for (const col of state.room.columns) {
+    for (const card of getSortedColumnCards(col.id)) renderCard(card);
+  }
   updateCounts();
 }
 
@@ -420,6 +424,75 @@ function openDelegateDropdown() {
   setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
 }
 
+/* ── Sort ── */
+const SORT_LABELS = { date: '⇅ Date', votes: '⇅ Votes', random: '⇅ Random' };
+
+function getSortedColumnCards(colId) {
+  const cards = [...state.cards.values()].filter(c => c.columnId === colId);
+  if (state.sortOrder === 'votes') {
+    cards.sort((a, b) => b.voteCount - a.voteCount);
+  } else if (state.sortOrder === 'random') {
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+  }
+  return cards;
+}
+
+function resortColumns() {
+  if (!state.room) return;
+  document.querySelectorAll('.card').forEach(el => el.style.animation = 'none');
+  for (const col of state.room.columns) {
+    const list = document.getElementById(`cards-${col.id}`);
+    if (!list) continue;
+    for (const card of getSortedColumnCards(col.id)) {
+      const el = document.getElementById(`card-${card.id}`);
+      if (el) list.appendChild(el);
+    }
+  }
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.card').forEach(el => el.style.animation = '');
+  });
+}
+
+function openSortDropdown() {
+  const existing = document.getElementById('sort-dropdown');
+  if (existing) { existing.remove(); return; }
+
+  const options = [
+    { value: 'date', label: 'Date' },
+    { value: 'votes', label: 'Votes' },
+    { value: 'random', label: 'Random' },
+  ];
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'sort-dropdown';
+  dropdown.className = 'sort-dropdown';
+  dropdown.innerHTML = options.map(o =>
+    `<div class="sort-dropdown-item${state.sortOrder === o.value ? ' active' : ''}" data-value="${o.value}">${o.label}</div>`
+  ).join('');
+
+  document.getElementById('sort-control').appendChild(dropdown);
+
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.sort-dropdown-item');
+    if (!item) return;
+    state.sortOrder = item.dataset.value;
+    document.getElementById('sort-btn').textContent = SORT_LABELS[state.sortOrder];
+    resortColumns();
+    dropdown.remove();
+  });
+
+  const closeOnOutside = (e) => {
+    if (!dropdown.contains(e.target) && e.target !== document.getElementById('sort-btn')) {
+      dropdown.remove();
+      document.removeEventListener('click', closeOnOutside);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
+}
+
 /* ── Copy link ── */
 function copyLink() {
   const url = `${location.origin}/room.html?code=${state.room.code}`;
@@ -446,7 +519,8 @@ function toast(msg) {
 /* ── Socket events ── */
 socket.on('card-added', (card) => {
   state.cards.set(card.id, card);
-  renderCard(card, true);
+  renderCard(card, state.sortOrder === 'date');
+  if (state.sortOrder === 'votes') resortColumns();
   updateCounts();
   if (!card.isOwn) {
     const authorLabel = card.authorName ? ` by ${card.authorName}` : '';
@@ -467,6 +541,7 @@ socket.on('card-votes-updated', ({ cardId, voteCount, hasVoted }) => {
   voteBtn.querySelector('.vote-count').textContent = voteCount;
   updateVotesCounter();
   updateVoteButtons();
+  if (state.sortOrder === 'votes') resortColumns();
 });
 
 socket.on('card-updated', ({ cardId, text }) => {

@@ -359,6 +359,29 @@ body {
   flex-shrink: 0;
 }
 
+/* Sort control */
+#sort-control { position: relative; }
+.sort-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 120px;
+  z-index: 50;
+  overflow: hidden;
+}
+.sort-dropdown-item {
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+}
+.sort-dropdown-item:hover { background: var(--bg); }
+.sort-dropdown-item.active { color: var(--primary); font-weight: 600; }
+
 /* ── COLUMNS ── */
 .columns-container {
   flex: 1;
