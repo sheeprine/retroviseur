@@ -208,6 +208,12 @@ body {
   overflow: hidden;
 }
 
+.room-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 #room-header {
   background: var(--surface);
   border-bottom: 1.5px solid var(--border);
@@ -267,55 +273,55 @@ body {
 }
 
 .participants-bar {
+  width: 168px;
+  flex-shrink: 0;
+  border-left: 1.5px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px 0;
+  gap: 2px;
+}
+.participant-row {
   display: flex;
   align-items: center;
-  gap: -4px;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 0;
 }
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 2px solid var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: #fff;
-  margin-left: -6px;
   flex-shrink: 0;
-  cursor: default;
   position: relative;
-}
-.avatar:first-child { margin-left: 0; }
-.avatar[title]:hover::after {
-  content: attr(title);
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--text);
-  color: #fff;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  z-index: 100;
-  pointer-events: none;
-}
-.avatar-overflow {
-  background: var(--border);
-  color: var(--text-muted);
-  font-size: 10px;
 }
 .avatar-facilitator::before {
   content: '👑';
   position: absolute;
-  top: -10px;
+  top: -9px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
   line-height: 1;
+}
+.participant-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.participant-name.is-facilitator {
+  color: var(--primary);
 }
 
 .facilitator-controls {

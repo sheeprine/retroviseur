@@ -38,7 +38,6 @@
           All PNG
         </button>
       </div>
-      <div id="participants-bar" class="participants-bar"></div>
       <div id="facilitator-controls" class="facilitator-controls hidden">
         <button id="markdown-btn" class="btn btn-sm btn-ghost">🔤 Markdown on</button>
         <button id="blur-btn" class="btn btn-sm btn-ghost">🫣 Blur cards</button>
@@ -49,8 +48,11 @@
     </div>
   </header>
 
-  <!-- Columns -->
-  <main id="columns-container" class="columns-container"></main>
+  <!-- Body -->
+  <div class="room-body">
+    <main id="columns-container" class="columns-container"></main>
+    <aside id="participants-bar" class="participants-bar"></aside>
+  </div>
 
   <!-- Toast -->
   <div id="toast-container" class="toast-container"></div>

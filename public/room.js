@@ -105,14 +105,13 @@ function initRoom(room) {
 function renderParticipants() {
   const bar = document.getElementById('participants-bar');
   const all = [...state.participants.values()];
-  const MAX = 6;
-  const shown = all.slice(0, MAX);
-  const extra = all.length - MAX;
-
-  bar.innerHTML = shown.map(p => {
+  bar.innerHTML = all.map(p => {
     const isFacil = p.id === state.facilitatorId;
-    return `<div class="avatar${isFacil ? ' avatar-facilitator' : ''}" style="background:${p.color}" title="${escHtml(p.name)}${isFacil ? ' (facilitator)' : ''}">${initials(p.name)}</div>`;
-  }).join('') + (extra > 0 ? `<div class="avatar avatar-overflow">+${extra}</div>` : '');
+    return `<div class="participant-row">` +
+      `<div class="avatar${isFacil ? ' avatar-facilitator' : ''}" style="background:${p.color}">${initials(p.name)}</div>` +
+      `<span class="participant-name${isFacil ? ' is-facilitator' : ''}">${escHtml(p.name)}</span>` +
+      `</div>`;
+  }).join('');
 }
 
 function renderFacilitatorControls() {
