@@ -154,7 +154,7 @@ body {
   gap: 10px;
   margin-bottom: 8px;
 }
-.logo-icon { font-size: 36px; }
+.logo-icon { width: 48px; height: 36px; transform: rotate(180deg); }
 .logo-text { font-size: 28px; font-weight: 700; color: var(--text); }
 .tagline { color: var(--text-muted); font-size: 16px; }
 
@@ -228,10 +228,12 @@ body {
   min-width: 0;
 }
 .logo-sm {
-  font-size: 22px;
   text-decoration: none;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
+.logo-sm svg { width: 29px; height: 22px; transform: rotate(180deg); }
 .room-title {
   font-size: 15px;
   font-weight: 600;
@@ -661,7 +663,8 @@ body {
   flex-direction: column;
   gap: 16px;
 }
-.modal-logo { font-size: 36px; text-align: center; }
+.modal-logo { text-align: center; }
+.modal-logo svg { width: 48px; height: 36px; transform: rotate(180deg); }
 .modal h2 { font-size: 20px; font-weight: 700; text-align: center; }
 .modal-subtitle { color: var(--text-muted); font-size: 14px; text-align: center; }
 
