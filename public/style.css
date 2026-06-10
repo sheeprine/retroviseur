@@ -288,7 +288,6 @@ body {
 .column {
   flex: 1;
   min-width: 280px;
-  max-width: 400px;
   display: flex;
   flex-direction: column;
   background: var(--surface);
@@ -350,6 +349,15 @@ body {
 }
 .card:hover { box-shadow: var(--shadow); }
 .card.is-own { border-color: #c7d2fe; background: #f5f3ff; }
+.card[draggable="true"] { cursor: grab; }
+.card.dragging { opacity: 0.4; }
+
+.cards-list.drag-over {
+  background: var(--primary-light);
+  border-radius: var(--radius);
+  outline: 2px dashed var(--primary);
+  outline-offset: -6px;
+}
 
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(-6px) scale(.98); }

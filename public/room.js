@@ -1,3 +1,6 @@
+/* ── Drag state ── */
+let draggedCardId = null;
+
 /* ── State ── */
 const state = {
   room: null,
@@ -136,6 +139,24 @@ function renderColumns() {
     container.appendChild(colEl);
 
     colEl.querySelector('.add-card-btn').addEventListener('click', () => openAddForm(col.id));
+
+    const cardsList = colEl.querySelector('.cards-list');
+    cardsList.addEventListener('dragover', (e) => {
+      if (!draggedCardId) return;
+      e.preventDefault();
+      cardsList.classList.add('drag-over');
+    });
+    cardsList.addEventListener('dragleave', (e) => {
+      if (!cardsList.contains(e.relatedTarget)) cardsList.classList.remove('drag-over');
+    });
+    cardsList.addEventListener('drop', (e) => {
+      e.preventDefault();
+      cardsList.classList.remove('drag-over');
+      if (!draggedCardId) return;
+      const card = state.cards.get(draggedCardId);
+      if (!card || card.columnId === col.id) return;
+      socket.emit('move-card', { cardId: draggedCardId, columnId: col.id });
+    });
   }
 
   // Render all existing cards
@@ -197,6 +218,20 @@ function bindCardEvents(el, card) {
     if (confirm('Delete this card?')) socket.emit('delete-card', { cardId: card.id });
   });
   el.querySelector('.edit-btn')?.addEventListener('click', () => openEditInline(el, card));
+
+  const canMove = card.isOwn || state.isFacilitator;
+  el.draggable = canMove;
+  el.ondragstart = canMove ? (e) => {
+    if (e.target.closest('button, textarea')) return;
+    draggedCardId = card.id;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => el.classList.add('dragging'), 0);
+  } : null;
+  el.ondragend = canMove ? () => {
+    draggedCardId = null;
+    el.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(d => d.classList.remove('drag-over'));
+  } : null;
 }
 
 /* ── Inline edit ── */
@@ -349,6 +384,16 @@ socket.on('card-updated', ({ cardId, text }) => {
     const textEl = el.querySelector('.card-text');
     if (textEl) textEl.textContent = text;
   }
+});
+
+socket.on('card-moved', ({ cardId, columnId }) => {
+  const card = state.cards.get(cardId);
+  if (!card) return;
+  card.columnId = columnId;
+  const el = document.getElementById(`card-${cardId}`);
+  const targetList = document.getElementById(`cards-${columnId}`);
+  if (el && targetList) targetList.appendChild(el);
+  updateCounts();
 });
 
 socket.on('card-deleted', ({ cardId }) => {

@@ -214,6 +214,17 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('reveal-toggled', { revealed: room.revealed, cardAuthors });
   });
 
+  socket.on('move-card', ({ cardId, columnId }) => {
+    const room = rooms.get(currentRoom);
+    if (!room) return;
+    const card = room.cards.get(cardId);
+    if (!card) return;
+    if (card.authorId !== socket.id && room.facilitatorId !== socket.id) return;
+    if (!room.columns.find(c => c.id === columnId)) return;
+    card.columnId = columnId;
+    io.to(currentRoom).emit('card-moved', { cardId, columnId });
+  });
+
   socket.on('clear-votes', () => {
     const room = rooms.get(currentRoom);
     if (!room || room.facilitatorId !== socket.id) return;
