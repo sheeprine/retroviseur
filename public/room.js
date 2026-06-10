@@ -139,6 +139,10 @@ function renderColumns() {
     container.appendChild(colEl);
 
     colEl.querySelector('.add-card-btn').addEventListener('click', () => openAddForm(col.id));
+    colEl.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.card, .add-card-area, button')) return;
+      openAddForm(col.id);
+    });
 
     const cardsList = colEl.querySelector('.cards-list');
     cardsList.addEventListener('dragover', (e) => {
