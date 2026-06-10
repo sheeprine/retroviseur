@@ -140,6 +140,12 @@ io.on('connection', (socket) => {
 
     addParticipant(socket, room, name);
     currentRoom = room.code;
+
+    // Claim facilitator if the previous facilitator socket is gone
+    if (!room.participants.has(room.facilitatorId)) {
+      room.facilitatorId = socket.id;
+    }
+
     cb({ ok: true, room: serializeRoom(room, socket.id) });
 
     const p = room.participants.get(socket.id);

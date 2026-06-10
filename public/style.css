@@ -266,6 +266,15 @@ body {
   color: var(--text-muted);
   font-size: 10px;
 }
+.avatar-facilitator::before {
+  content: '👑';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+}
 
 .facilitator-controls {
   display: flex;

@@ -6,6 +6,7 @@ const state = {
   room: null,
   myName: '',
   isFacilitator: false,
+  facilitatorId: null,
   cards: new Map(),        // cardId → card data
   participants: new Map()  // id → participant
 };
@@ -69,6 +70,7 @@ function joinWithName(code, name) {
 function initRoom(room) {
   state.room = room;
   state.isFacilitator = room.isFacilitator;
+  state.facilitatorId = room.facilitatorId;
 
   document.title = `${room.name} — Rétroviseur`;
   document.getElementById('room-title').textContent = room.name;
@@ -96,9 +98,10 @@ function renderParticipants() {
   const shown = all.slice(0, MAX);
   const extra = all.length - MAX;
 
-  bar.innerHTML = shown.map(p =>
-    `<div class="avatar" style="background:${p.color}" title="${escHtml(p.name)}">${initials(p.name)}</div>`
-  ).join('') + (extra > 0 ? `<div class="avatar avatar-overflow">+${extra}</div>` : '');
+  bar.innerHTML = shown.map(p => {
+    const isFacil = p.id === state.facilitatorId;
+    return `<div class="avatar${isFacil ? ' avatar-facilitator' : ''}" style="background:${p.color}" title="${escHtml(p.name)}${isFacil ? ' (facilitator)' : ''}">${initials(p.name)}</div>`;
+  }).join('') + (extra > 0 ? `<div class="avatar avatar-overflow">+${extra}</div>` : '');
 }
 
 function renderFacilitatorControls() {
@@ -457,11 +460,13 @@ socket.on('participant-left', ({ id }) => {
 });
 
 socket.on('facilitator-changed', ({ facilitatorId }) => {
+  state.facilitatorId = facilitatorId;
   if (facilitatorId === socket.id) {
     state.isFacilitator = true;
     renderFacilitatorControls();
     toast('👑 You are now the facilitator');
   }
+  renderParticipants();
 });
 
 socket.on('disconnect', () => {
