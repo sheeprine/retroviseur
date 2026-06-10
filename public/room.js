@@ -246,9 +246,12 @@ function cardHTML(card) {
 }
 
 function updateCardEl(el, card) {
-  el.className = `card${card.isOwn ? ' is-own' : ''}`;
-  el.innerHTML = cardHTML(card);
-  bindCardEvents(el, card);
+  if (el.querySelector('.card-edit-area')) return;
+  const fresh = el.cloneNode(false);
+  fresh.className = `card${card.isOwn ? ' is-own' : ''}`;
+  fresh.innerHTML = cardHTML(card);
+  el.replaceWith(fresh);
+  bindCardEvents(fresh, card);
 }
 
 function bindCardEvents(el, card) {
@@ -304,6 +307,7 @@ function bindCardEvents(el, card) {
 
 /* ── Inline edit ── */
 function openEditInline(el, card) {
+  if (el.querySelector('.card-edit-area')) return;
   const textEl = el.querySelector('.card-text');
   const footer = el.querySelector('.card-footer');
   const author = el.querySelector('.card-author');
