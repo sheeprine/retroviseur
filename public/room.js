@@ -87,6 +87,8 @@ function initRoom(room) {
 
   document.getElementById('copy-btn').addEventListener('click', copyLink);
   document.getElementById('sort-btn').addEventListener('click', openSortDropdown);
+  document.getElementById('export-pdf-btn').addEventListener('click', exportAllToPDF);
+  document.getElementById('export-png-btn').addEventListener('click', exportAllToPNG);
   document.getElementById('markdown-btn')?.addEventListener('click', () => socket.emit('toggle-markdown'));
   document.getElementById('blur-btn')?.addEventListener('click', () => socket.emit('toggle-blur'));
   document.getElementById('reveal-btn')?.addEventListener('click', () => socket.emit('toggle-reveal'));
@@ -159,6 +161,16 @@ function renderColumns() {
           <span class="column-title">${escHtml(col.title)}</span>
           <span class="column-count" id="count-${col.id}">0</span>
         </div>
+        <div class="column-export-btns">
+          <button class="column-export-btn" data-export="pdf" title="Export to PDF">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF
+          </button>
+          <button class="column-export-btn" data-export="png" title="Export to PNG">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            PNG
+          </button>
+        </div>
       </div>
       <div class="cards-list" id="cards-${col.id}"></div>
       <div class="add-card-area" id="add-area-${col.id}">
@@ -169,6 +181,8 @@ function renderColumns() {
       </div>`;
     container.appendChild(colEl);
 
+    colEl.querySelector('[data-export="pdf"]').addEventListener('click', () => exportColumnToPDF(col.id));
+    colEl.querySelector('[data-export="png"]').addEventListener('click', () => exportColumnToPNG(col.id));
     colEl.querySelector('.add-card-btn').addEventListener('click', () => openAddForm(col.id));
     colEl.addEventListener('dblclick', (e) => {
       if (e.target.closest('.card, .add-card-area, button')) return;
@@ -686,6 +700,345 @@ socket.on('disconnect', () => {
 socket.on('connect', () => {
   if (state.room) toast('✓ Reconnected');
 });
+
+/* ── Export to PDF ── */
+function exportColumnToPDF(colId) {
+  const col = state.room.columns.find(c => c.id === colId);
+  if (!col) return;
+
+  const cards = getSortedColumnCards(colId);
+  const useMarkdown = !!state.room?.markdown;
+
+  const cardRows = cards.map(card => {
+    const textContent = useMarkdown
+      ? DOMPurify.sanitize(marked.parse(String(card.text ?? '')))
+      : escHtml(String(card.text ?? ''));
+    const plainClass = useMarkdown ? '' : ' plain';
+    const author = card.authorName ? `<div class="card-author">— ${escHtml(card.authorName)}</div>` : '';
+    const votes = card.voteCount > 0 ? `<div class="card-votes">👍 ${card.voteCount} vote${card.voteCount !== 1 ? 's' : ''}</div>` : '';
+    return `<div class="card"><div class="card-text${plainClass}">${textContent}</div>${author}${votes}</div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${escHtml(col.title)} — ${escHtml(state.room.name)}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #1e293b; max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 20px; font-weight: 700; margin: 0 0 4px; border-bottom: 3px solid ${col.color}; padding-bottom: 8px; }
+    .subtitle { font-size: 13px; color: #64748b; margin: 0 0 24px; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 12px; page-break-inside: avoid; }
+    .card-text { font-size: 14px; line-height: 1.6; word-break: break-word; }
+    .card-text.plain { white-space: pre-wrap; }
+    .card-text p { margin: 0 0 .4em; }
+    .card-text ul, .card-text ol { margin: 0 0 .4em; padding-left: 1.4em; }
+    .card-text code { font-size: 12px; background: rgba(0,0,0,.06); border-radius: 3px; padding: 1px 4px; }
+    .card-text pre { font-size: 12px; background: rgba(0,0,0,.06); border-radius: 4px; padding: 8px; overflow-x: auto; margin: 0 0 .4em; }
+    .card-text > :first-child { margin-top: 0; }
+    .card-text > :last-child { margin-bottom: 0; }
+    .card-author { font-size: 11px; color: #64748b; margin-top: 8px; }
+    .card-votes { font-size: 12px; color: #64748b; margin-top: 4px; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <h1>${escHtml(col.title)}</h1>
+  <div class="subtitle">${escHtml(state.room.name)} · ${cards.length} card${cards.length !== 1 ? 's' : ''}</div>
+  ${cardRows || '<p style="color:#64748b;font-size:14px">No cards in this column.</p>'}
+  <script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { toast('Allow pop-ups to export PDF'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+function exportAllToPDF() {
+  const useMarkdown = !!state.room?.markdown;
+  const totalCards = [...state.cards.values()].length;
+
+  const CSS = `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 32px; color: #1e293b; max-width: 680px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+    .room-subtitle { font-size: 13px; color: #64748b; margin: 0 0 32px; }
+    h2 { font-size: 18px; font-weight: 700; margin: 0 0 4px; border-bottom: 3px solid; padding-bottom: 8px; }
+    .col-subtitle { font-size: 13px; color: #64748b; margin: 0 0 16px; }
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px; page-break-inside: avoid; }
+    .card-text { font-size: 14px; line-height: 1.6; word-break: break-word; }
+    .card-text.plain { white-space: pre-wrap; }
+    .card-text p { margin: 0 0 .4em; } .card-text ul,.card-text ol { margin: 0 0 .4em; padding-left: 1.4em; }
+    .card-text code { font-size: 12px; background: rgba(0,0,0,.06); border-radius: 3px; padding: 1px 4px; }
+    .card-text pre { font-size: 12px; background: rgba(0,0,0,.06); border-radius: 4px; padding: 8px; overflow-x: auto; margin: 0 0 .4em; }
+    .card-text > :first-child { margin-top: 0; } .card-text > :last-child { margin-bottom: 0; }
+    .card-author { font-size: 11px; color: #64748b; margin-top: 8px; }
+    .card-votes { font-size: 12px; color: #64748b; margin-top: 4px; }
+    .empty { font-size: 14px; color: #94a3b8; margin: 0; }
+    @media print { body { padding: 0; } }`;
+
+  const sections = state.room.columns.map((col, i) => {
+    const cards = getSortedColumnCards(col.id);
+    const cardRows = cards.map(card => {
+      const textContent = useMarkdown
+        ? DOMPurify.sanitize(marked.parse(String(card.text ?? '')))
+        : escHtml(String(card.text ?? ''));
+      const author = card.authorName ? `<div class="card-author">— ${escHtml(card.authorName)}</div>` : '';
+      const votes = card.voteCount > 0 ? `<div class="card-votes">👍 ${card.voteCount} vote${card.voteCount !== 1 ? 's' : ''}</div>` : '';
+      return `<div class="card"><div class="card-text${useMarkdown ? '' : ' plain'}">${textContent}</div>${author}${votes}</div>`;
+    }).join('');
+    const breakStyle = i > 0 ? ' style="page-break-before:always"' : '';
+    return `<section${breakStyle}>
+      <h2 style="border-bottom-color:${col.color}">${escHtml(col.title)}</h2>
+      <div class="col-subtitle">${cards.length} card${cards.length !== 1 ? 's' : ''}</div>
+      ${cardRows || '<p class="empty">No cards in this column.</p>'}
+    </section>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+    <title>${escHtml(state.room.name)}</title><style>${CSS}</style></head>
+    <body>
+      <h1>${escHtml(state.room.name)}</h1>
+      <div class="room-subtitle">${state.room.columns.length} columns · ${totalCards} card${totalCards !== 1 ? 's' : ''} total</div>
+      ${sections}
+      <script>window.onload=function(){window.print()}<\/script>
+    </body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { toast('Allow pop-ups to export PDF'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+/* ── PNG helpers (shared) ── */
+const PNG_FONT = '"Helvetica Neue", Arial, sans-serif';
+let _pngMCtx = null;
+function pngWrap(text, maxW, fs) {
+  if (!_pngMCtx) _pngMCtx = document.createElement('canvas').getContext('2d');
+  _pngMCtx.font = `${fs}px ${PNG_FONT}`;
+  const lines = [];
+  for (const para of String(text ?? '').split('\n')) {
+    if (!para) { lines.push(''); continue; }
+    let line = '';
+    for (const word of para.split(/\s+/)) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && _pngMCtx.measureText(test).width > maxW) { lines.push(line); line = word; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+function pngStripHtml(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return d.textContent || '';
+}
+function pngRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function pngCardData(cards, textW, cardPad) {
+  const TEXT_FS = 14, TEXT_LH = 22, AUTHOR_FS = 11, AUTHOR_LH = 16, VOTES_FS = 12, VOTES_LH = 18;
+  return cards.map(card => {
+    const rawText = state.room?.markdown
+      ? pngStripHtml(DOMPurify.sanitize(marked.parse(String(card.text ?? ''))))
+      : String(card.text ?? '');
+    const textLines = pngWrap(rawText, textW, TEXT_FS);
+    const authorStr = card.authorName ? `— ${card.authorName}` : null;
+    const authorLines = authorStr ? pngWrap(authorStr, textW, AUTHOR_FS) : [];
+    const votesStr = card.voteCount > 0 ? `👍 ${card.voteCount} vote${card.voteCount !== 1 ? 's' : ''}` : null;
+    let h = cardPad + textLines.length * TEXT_LH;
+    if (authorStr) h += 8 + authorLines.length * AUTHOR_LH;
+    if (votesStr) h += 6 + VOTES_LH;
+    h += cardPad;
+    return { textLines, authorStr, authorLines, votesStr, h };
+  });
+}
+function pngDrawCards(ctx, cardData, x, y, colW, cardPad, cardGap) {
+  const TEXT_FS = 14, TEXT_LH = 22, AUTHOR_FS = 11, AUTHOR_LH = 16, VOTES_FS = 12, VOTES_LH = 18;
+  for (const card of cardData) {
+    pngRoundRect(ctx, x, y, colW, card.h, 8);
+    ctx.fillStyle = '#f8fafc'; ctx.fill();
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    const px = x + cardPad;
+    let cy = y + cardPad;
+    ctx.fillStyle = '#1e293b';
+    ctx.font = `${TEXT_FS}px ${PNG_FONT}`;
+    for (const line of card.textLines) { ctx.fillText(line, px, cy); cy += TEXT_LH; }
+
+    if (card.authorStr) {
+      cy += 8;
+      ctx.fillStyle = '#64748b';
+      ctx.font = `${AUTHOR_FS}px ${PNG_FONT}`;
+      for (const line of card.authorLines) { ctx.fillText(line, px, cy); cy += AUTHOR_LH; }
+    }
+    if (card.votesStr) {
+      cy += 6;
+      ctx.fillStyle = '#64748b';
+      ctx.font = `${VOTES_FS}px ${PNG_FONT}`;
+      ctx.fillText(card.votesStr, px, cy);
+    }
+    y += card.h + cardGap;
+  }
+}
+
+/* ── Export to PNG ── */
+function exportColumnToPNG(colId) {
+  const col = state.room.columns.find(c => c.id === colId);
+  if (!col) return;
+  const cards = getSortedColumnCards(colId);
+
+  const DPR = 2, PAD = 28, CARD_PAD = 14, CARD_GAP = 10;
+  const INNER_W = 504, W = INNER_W + PAD * 2;
+  const TEXT_W = INNER_W - CARD_PAD * 2;
+  const TEXT_LH = 22, TITLE_FS = 20, SUBTITLE_FS = 13;
+
+  const cardData = pngCardData(cards, TEXT_W, CARD_PAD);
+
+  let totalH = PAD + TITLE_FS + 4 + 3 + 8 + SUBTITLE_FS + 20;
+  if (cardData.length === 0) { totalH += TEXT_LH; }
+  else { for (const c of cardData) totalH += c.h + CARD_GAP; totalH -= CARD_GAP; }
+  totalH += PAD;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W * DPR;
+  canvas.height = totalH * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.textBaseline = 'top';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, totalH);
+
+  let y = PAD;
+
+  ctx.fillStyle = '#1e293b';
+  ctx.font = `700 ${TITLE_FS}px ${PNG_FONT}`;
+  ctx.fillText(col.title, PAD, y);
+  y += TITLE_FS + 4;
+
+  ctx.fillStyle = col.color;
+  ctx.fillRect(PAD, y, INNER_W, 3);
+  y += 3 + 8;
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `${SUBTITLE_FS}px ${PNG_FONT}`;
+  ctx.fillText(`${state.room.name} · ${cards.length} card${cards.length !== 1 ? 's' : ''}`, PAD, y);
+  y += SUBTITLE_FS + 20;
+
+  if (cardData.length === 0) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `14px ${PNG_FONT}`;
+    ctx.fillText('No cards in this column.', PAD, y);
+  }
+
+  pngDrawCards(ctx, cardData, PAD, y, INNER_W, CARD_PAD, CARD_GAP);
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${col.title}.png`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+function exportAllToPNG() {
+  const DPR = 2, PAD = 28, COL_GAP = 20, CARD_PAD = 14, CARD_GAP = 10;
+  const COL_W = 504, TEXT_W = COL_W - CARD_PAD * 2;
+  const TEXT_LH = 22, TITLE_FS = 20, SUBTITLE_FS = 13, ROOM_TITLE_FS = 22;
+
+  const cols = state.room.columns;
+  const totalCards = [...state.cards.values()].length;
+
+  const colData = cols.map(col => {
+    const cards = getSortedColumnCards(col.id);
+    const cardData = pngCardData(cards, TEXT_W, CARD_PAD);
+    const cardsH = cardData.length === 0
+      ? TEXT_LH
+      : cardData.reduce((s, c) => s + c.h + CARD_GAP, 0) - CARD_GAP;
+    return { col, cards, cardData, cardsH };
+  });
+
+  const roomHeaderH = ROOM_TITLE_FS + 4 + 3 + 10 + SUBTITLE_FS + 24;
+  const colHeaderH  = TITLE_FS + 4 + 3 + 8 + SUBTITLE_FS + 20;
+  const maxCardsH   = Math.max(0, ...colData.map(c => c.cardsH));
+  const innerW      = cols.length * COL_W + Math.max(0, cols.length - 1) * COL_GAP;
+  const W           = PAD + innerW + PAD;
+  const totalH      = PAD + roomHeaderH + colHeaderH + maxCardsH + PAD;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = W * DPR;
+  canvas.height = totalH * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.textBaseline = 'top';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, totalH);
+
+  let y = PAD;
+
+  ctx.fillStyle = '#1e293b';
+  ctx.font = `700 ${ROOM_TITLE_FS}px ${PNG_FONT}`;
+  ctx.fillText(state.room.name, PAD, y);
+  y += ROOM_TITLE_FS + 4;
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(PAD, y, innerW, 3);
+  y += 3 + 10;
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = `${SUBTITLE_FS}px ${PNG_FONT}`;
+  ctx.fillText(`${cols.length} column${cols.length !== 1 ? 's' : ''} · ${totalCards} card${totalCards !== 1 ? 's' : ''} total`, PAD, y);
+  y += SUBTITLE_FS + 24;
+
+  for (let i = 0; i < colData.length; i++) {
+    const { col, cards, cardData } = colData[i];
+    const x = PAD + i * (COL_W + COL_GAP);
+    let cy = y;
+
+    ctx.fillStyle = '#1e293b';
+    ctx.font = `700 ${TITLE_FS}px ${PNG_FONT}`;
+    ctx.fillText(col.title, x, cy);
+    cy += TITLE_FS + 4;
+
+    ctx.fillStyle = col.color;
+    ctx.fillRect(x, cy, COL_W, 3);
+    cy += 3 + 8;
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = `${SUBTITLE_FS}px ${PNG_FONT}`;
+    ctx.fillText(`${cards.length} card${cards.length !== 1 ? 's' : ''}`, x, cy);
+    cy += SUBTITLE_FS + 20;
+
+    if (cardData.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = `14px ${PNG_FONT}`;
+      ctx.fillText('No cards in this column.', x, cy);
+    } else {
+      pngDrawCards(ctx, cardData, x, cy, COL_W, CARD_PAD, CARD_GAP);
+    }
+  }
+
+  canvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${state.room.name}.png`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
 
 /* ── Utils ── */
 function renderMd(text) {
