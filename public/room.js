@@ -88,6 +88,7 @@ function initRoom(room) {
   document.getElementById('clear-votes-btn')?.addEventListener('click', () => {
     if (confirm('Clear all votes?')) socket.emit('clear-votes');
   });
+  document.getElementById('delegate-btn')?.addEventListener('click', openDelegateDropdown);
 }
 
 /* ── Render helpers ── */
@@ -335,6 +336,41 @@ function updateCounts() {
   }
 }
 
+/* ── Delegate facilitator ── */
+function openDelegateDropdown() {
+  const existing = document.getElementById('delegate-dropdown');
+  if (existing) { existing.remove(); return; }
+
+  const others = [...state.participants.values()].filter(p => p.id !== socket.id);
+  if (others.length === 0) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.id = 'delegate-dropdown';
+  dropdown.className = 'delegate-dropdown';
+  dropdown.innerHTML = others.map(p =>
+    `<div class="delegate-dropdown-item" data-id="${escHtml(p.id)}">` +
+    `<span class="avatar-mini" style="background:${p.color}">${escHtml(initials(p.name))}</span>` +
+    `${escHtml(p.name)}</div>`
+  ).join('');
+
+  document.getElementById('facilitator-controls').appendChild(dropdown);
+
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.delegate-dropdown-item');
+    if (!item) return;
+    socket.emit('delegate-facilitator', { targetId: item.dataset.id });
+    dropdown.remove();
+  });
+
+  const closeOnOutside = (e) => {
+    if (!dropdown.contains(e.target) && e.target !== document.getElementById('delegate-btn')) {
+      dropdown.remove();
+      document.removeEventListener('click', closeOnOutside);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeOnOutside), 0);
+}
+
 /* ── Copy link ── */
 function copyLink() {
   const url = `${location.origin}/room.html?code=${state.room.code}`;
@@ -461,11 +497,10 @@ socket.on('participant-left', ({ id }) => {
 
 socket.on('facilitator-changed', ({ facilitatorId }) => {
   state.facilitatorId = facilitatorId;
-  if (facilitatorId === socket.id) {
-    state.isFacilitator = true;
-    renderFacilitatorControls();
-    toast('👑 You are now the facilitator');
-  }
+  const wasMe = state.isFacilitator;
+  state.isFacilitator = facilitatorId === socket.id;
+  if (state.isFacilitator && !wasMe) toast('👑 You are now the facilitator');
+  renderFacilitatorControls();
   renderParticipants();
 });
 

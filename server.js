@@ -231,6 +231,14 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('card-moved', { cardId, columnId });
   });
 
+  socket.on('delegate-facilitator', ({ targetId }) => {
+    const room = rooms.get(currentRoom);
+    if (!room || room.facilitatorId !== socket.id) return;
+    if (!room.participants.has(targetId)) return;
+    room.facilitatorId = targetId;
+    io.to(currentRoom).emit('facilitator-changed', { facilitatorId: targetId });
+  });
+
   socket.on('clear-votes', () => {
     const room = rooms.get(currentRoom);
     if (!room || room.facilitatorId !== socket.id) return;
