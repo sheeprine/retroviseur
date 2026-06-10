@@ -253,6 +253,12 @@ function bindCardEvents(el, card) {
   });
   el.querySelector('.edit-btn')?.addEventListener('click', () => openEditInline(el, card));
 
+  const canEdit = card.isOwn || state.isFacilitator;
+  if (canEdit) el.addEventListener('dblclick', (e) => {
+    if (e.target.closest('button, textarea, .card-edit-actions')) return;
+    openEditInline(el, card);
+  });
+
   const canMove = card.isOwn || state.isFacilitator;
   el.draggable = canMove;
   el.ondragstart = canMove ? (e) => {
