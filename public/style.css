@@ -483,6 +483,12 @@ body {
   outline-offset: -6px;
 }
 
+.card.merge-target {
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+  background: var(--primary-light);
+}
+
 @keyframes cardIn {
   from { opacity: 0; transform: translateY(-6px) scale(.98); }
   to { opacity: 1; transform: none; }
@@ -493,6 +499,7 @@ body {
   line-height: 1.55;
   color: var(--text);
   word-break: break-word;
+  white-space: pre-wrap;
 }
 .card-author {
   font-size: 11px;

@@ -265,7 +265,27 @@ function bindCardEvents(el, card) {
     draggedCardId = null;
     el.classList.remove('dragging');
     document.querySelectorAll('.drag-over').forEach(d => d.classList.remove('drag-over'));
+    document.querySelectorAll('.merge-target').forEach(d => d.classList.remove('merge-target'));
   } : null;
+
+  el.addEventListener('dragover', (e) => {
+    if (!draggedCardId || draggedCardId === card.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+    el.classList.add('merge-target');
+    el.closest('.cards-list')?.classList.remove('drag-over');
+  });
+  el.addEventListener('dragleave', (e) => {
+    if (!el.contains(e.relatedTarget)) el.classList.remove('merge-target');
+  });
+  el.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    el.classList.remove('merge-target');
+    if (!draggedCardId || draggedCardId === card.id) return;
+    socket.emit('merge-card', { sourceCardId: draggedCardId, targetCardId: card.id });
+  });
 }
 
 /* ── Inline edit ── */

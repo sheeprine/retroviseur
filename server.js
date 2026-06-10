@@ -239,6 +239,27 @@ io.on('connection', (socket) => {
     io.to(currentRoom).emit('card-moved', { cardId, columnId });
   });
 
+  socket.on('merge-card', ({ sourceCardId, targetCardId }) => {
+    const room = rooms.get(currentRoom);
+    if (!room) return;
+    const source = room.cards.get(sourceCardId);
+    const target = room.cards.get(targetCardId);
+    if (!source || !target || sourceCardId === targetCardId) return;
+    if (source.authorId !== socket.id && room.facilitatorId !== socket.id) return;
+    target.text = (target.text + '\n\n' + source.text).slice(0, 500);
+    for (const voterId of source.votes) target.votes.add(voterId);
+    room.cards.delete(sourceCardId);
+    io.to(currentRoom).emit('card-deleted', { cardId: sourceCardId });
+    io.to(currentRoom).emit('card-updated', { cardId: targetCardId, text: target.text });
+    for (const [pid] of room.participants) {
+      io.to(pid).emit('card-votes-updated', {
+        cardId: targetCardId,
+        voteCount: target.votes.size,
+        hasVoted: target.votes.has(pid)
+      });
+    }
+  });
+
   socket.on('delegate-facilitator', ({ targetId }) => {
     const room = rooms.get(currentRoom);
     if (!room || room.facilitatorId !== socket.id) return;
