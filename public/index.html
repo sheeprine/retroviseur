@@ -38,6 +38,16 @@
               <option value="mad_sad_glad">Mad / Sad / Glad</option>
             </select>
           </div>
+          <details class="advanced-config">
+            <summary>Configuration</summary>
+            <div class="advanced-config-body">
+              <div class="field">
+                <label for="max-votes">Max votes per participant</label>
+                <input id="max-votes" type="number" min="0" max="99" value="0" />
+                <span class="field-hint">0 = unlimited</span>
+              </div>
+            </div>
+          </details>
           <button type="submit" class="btn btn-primary btn-full">Create Room</button>
         </form>
       </div>
@@ -90,10 +100,11 @@
       const name = document.getElementById('create-name').value.trim();
       const roomName = document.getElementById('room-name').value.trim();
       const format = document.getElementById('format').value;
+      const maxVotes = parseInt(document.getElementById('max-votes').value) || 0;
       if (!name) return;
 
       localStorage.setItem('retro-name', name);
-      socket.emit('create-room', { name, roomName, format }, ({ ok, room, error }) => {
+      socket.emit('create-room', { name, roomName, format, maxVotes }, ({ ok, room, error }) => {
         if (ok) {
           sessionStorage.setItem('retro-room', JSON.stringify(room));
           location.href = `/room.html?code=${room.code}`;

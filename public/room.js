@@ -82,6 +82,7 @@ function initRoom(room) {
   renderParticipants();
   renderFacilitatorControls();
   renderColumns();
+  updateVotesCounter();
 
   document.getElementById('copy-btn').addEventListener('click', copyLink);
   document.getElementById('blur-btn')?.addEventListener('click', () => socket.emit('toggle-blur'));
@@ -219,11 +220,13 @@ function cardHTML(card) {
     ? `<div class="card-author">— ${escHtml(card.authorName)}</div>`
     : '';
   const votedClass = card.hasVoted ? ' voted' : '';
+  const max = state.room?.maxVotes;
+  const atLimit = max > 0 && countMyVotes() >= max && !card.hasVoted;
   return `
     <div class="card-text">${escHtml(card.text)}</div>
     ${author}
     <div class="card-footer">
-      <button class="vote-btn${votedClass}" data-card="${card.id}">
+      <button class="vote-btn${votedClass}" data-card="${card.id}"${atLimit ? ' disabled' : ''}>
         👍 <span class="vote-count">${card.voteCount}</span>
       </button>
       <div class="card-actions">${editBtn}${deleteBtn}</div>
@@ -345,6 +348,33 @@ function openAddForm(columnId) {
   });
 }
 
+/* ── Votes counter ── */
+function countMyVotes() {
+  return [...state.cards.values()].filter(c => c.hasVoted).length;
+}
+
+function updateVotesCounter() {
+  const el = document.getElementById('votes-counter');
+  if (!el) return;
+  const max = state.room?.maxVotes;
+  if (!max) { el.classList.add('hidden'); return; }
+  const used = countMyVotes();
+  const left = max - used;
+  el.textContent = `${left} vote${left !== 1 ? 's' : ''} left`;
+  el.classList.toggle('hidden', false);
+  el.classList.toggle('exhausted', left === 0);
+}
+
+function updateVoteButtons() {
+  const max = state.room?.maxVotes;
+  if (!max) return;
+  const atLimit = countMyVotes() >= max;
+  for (const [, card] of state.cards) {
+    const btn = document.querySelector(`#card-${card.id} .vote-btn`);
+    if (btn) btn.disabled = atLimit && !card.hasVoted;
+  }
+}
+
 /* ── Count badges ── */
 function updateCounts() {
   if (!state.room) return;
@@ -435,6 +465,8 @@ socket.on('card-votes-updated', ({ cardId, voteCount, hasVoted }) => {
   if (!voteBtn) return;
   voteBtn.className = `vote-btn${hasVoted ? ' voted' : ''}`;
   voteBtn.querySelector('.vote-count').textContent = voteCount;
+  updateVotesCounter();
+  updateVoteButtons();
 });
 
 socket.on('card-updated', ({ cardId, text }) => {
@@ -498,8 +530,10 @@ socket.on('votes-cleared', () => {
     const voteBtn = el.querySelector('.vote-btn');
     if (!voteBtn) continue;
     voteBtn.className = 'vote-btn';
+    voteBtn.disabled = false;
     voteBtn.querySelector('.vote-count').textContent = '0';
   }
+  updateVotesCounter();
   toast('🗑 All votes cleared');
 });
 
