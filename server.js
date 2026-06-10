@@ -116,7 +116,7 @@ function addParticipant(socket, room, name) {
 io.on('connection', (socket) => {
   let currentRoom = null;
 
-  socket.on('create-room', ({ name, roomName, format, maxVotes }, cb) => {
+  socket.on('create-room', ({ name, roomName, format, maxVotes, blurred }, cb) => {
     const code = generateCode();
     const fmt = FORMATS[format] || FORMATS.classic;
     const room = {
@@ -128,7 +128,7 @@ io.on('connection', (socket) => {
       participants: new Map(),
       facilitatorId: socket.id,
       revealed: false,
-      blurred: false,
+      blurred: blurred === true,
       maxVotes: Math.max(0, Math.min(99, parseInt(maxVotes) || 0))
     };
     rooms.set(code, room);

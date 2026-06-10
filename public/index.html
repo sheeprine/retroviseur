@@ -46,6 +46,10 @@
                 <input id="max-votes" type="number" min="0" max="99" value="0" />
                 <span class="field-hint">0 = unlimited</span>
               </div>
+              <div class="field field-checkbox">
+                <input id="start-blurred" type="checkbox" />
+                <label for="start-blurred">Start with cards blurred</label>
+              </div>
             </div>
           </details>
           <button type="submit" class="btn btn-primary btn-full">Create Room</button>
@@ -101,10 +105,11 @@
       const roomName = document.getElementById('room-name').value.trim();
       const format = document.getElementById('format').value;
       const maxVotes = parseInt(document.getElementById('max-votes').value) || 0;
+      const blurred = document.getElementById('start-blurred').checked;
       if (!name) return;
 
       localStorage.setItem('retro-name', name);
-      socket.emit('create-room', { name, roomName, format, maxVotes }, ({ ok, room, error }) => {
+      socket.emit('create-room', { name, roomName, format, maxVotes, blurred }, ({ ok, room, error }) => {
         if (ok) {
           sessionStorage.setItem('retro-room', JSON.stringify(room));
           location.href = `/room.html?code=${room.code}`;
